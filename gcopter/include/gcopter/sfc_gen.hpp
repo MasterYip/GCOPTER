@@ -41,7 +41,19 @@
 
 namespace sfc_gen
 {
-
+    /**
+     * @brief Plan a path in Map using OMPL InformedRRTstar
+     * 
+     * @tparam Map 
+     * @param s 
+     * @param g 
+     * @param lb 
+     * @param hb 
+     * @param mapPtr 
+     * @param timeout 
+     * @param p 
+     * @return double 
+     */
     template <typename Map>
     inline double planPath(const Eigen::Vector3d &s,
                            const Eigen::Vector3d &g,
@@ -113,6 +125,17 @@ namespace sfc_gen
         return cost;
     }
 
+    /**
+     * @brief [IMPORTANT] Generate convex cover of a path 
+     * @param[in] path RRT path
+     * @param[in] points Boundary points of obstacles 
+     * @param[in] lowCorner low bound of the map
+     * @param[in] highCorner high bound of the map
+     * @param[in] progress max path length each polygon can cover
+     * @param[in] range 
+     * @param[out] hpolys Convex cover of the path
+     * @param[in] eps epsilon
+     */
     inline void convexCover(const std::vector<Eigen::Vector3d> &path,
                             const std::vector<Eigen::Vector3d> &points,
                             const Eigen::Vector3d &lowCorner,
@@ -167,7 +190,9 @@ namespace sfc_gen
                 }
             }
             Eigen::Map<const Eigen::Matrix<double, 3, -1, Eigen::ColMajor>> pc(valid_pc[0].data(), 3, valid_pc.size());
-
+            
+            // There must be a solution for a,b
+            // because the path is collision free with margin (the polyhedron might be thin)
             firi::firi(bd, pc, a, b, hp);
 
             if (hpolys.size() != 0)

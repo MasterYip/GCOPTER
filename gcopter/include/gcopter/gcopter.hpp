@@ -721,10 +721,23 @@ namespace gcopter
         }
 
     public:
-        // magnitudeBounds = [v_max, omg_max, theta_max, thrust_min, thrust_max]^T
-        // penaltyWeights = [pos_weight, vel_weight, omg_weight, theta_weight, thrust_weight]^T
-        // physicalParams = [vehicle_mass, gravitational_acceleration, horitonral_drag_coeff,
-        //                   vertical_drag_coeff, parasitic_drag_coeff, speed_smooth_factor]^T
+        /**
+         * @brief Setup MINCO optimization problem
+         * 
+         * @param timeWeight 
+         * @param initialPVA Initial position, velocity, and acceleration
+         * @param terminalPVA Terminal position, velocity, and acceleration
+         * @param safeCorridor 
+         * @param lengthPerPiece 
+         * @param smoothingFactor 
+         * @param integralResolution 
+         * @param magnitudeBounds [v_max, omg_max, theta_max, thrust_min, thrust_max]^T
+         * @param penaltyWeights [pos_weight, vel_weight, omg_weight, theta_weight, thrust_weight]^T
+         * @param physicalParams [vehicle_mass, gravitational_acceleration, horitonral_drag_coeff,
+         *                        vertical_drag_coeff, parasitic_drag_coeff, speed_smooth_factor]^T
+         * @return true 
+         * @return false 
+         */
         inline bool setup(const double &timeWeight,
                           const Eigen::Matrix3d &initialPVA,
                           const Eigen::Matrix3d &terminalPVA,

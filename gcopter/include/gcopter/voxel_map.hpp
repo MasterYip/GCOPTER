@@ -57,11 +57,11 @@ namespace voxel_map
 
     private:
         Eigen::Vector3i mapSize;
-        Eigen::Vector3d o;
+        Eigen::Vector3d o; // origin
         double scale;
         int voxNum;
         Eigen::Vector3i step;
-        Eigen::Vector3d oc;
+        Eigen::Vector3d oc; // origin of center
         Eigen::Vector3i bounds;
         Eigen::Vector3d stepScale;
         std::vector<uint8_t> voxels;
@@ -112,6 +112,11 @@ namespace voxel_map
             }
         }
 
+        /**
+         * @brief Dilate the map by r voxels
+         * 
+         * @param r 
+         */
         inline void dilate(const int &r)
         {
             if (r <= 0)
@@ -120,11 +125,13 @@ namespace voxel_map
             }
             else
             {
+
                 std::vector<Eigen::Vector3i> lvec, cvec;
                 lvec.reserve(voxNum);
                 cvec.reserve(voxNum);
                 int i, j, k, idx;
                 bool check;
+                // first round
                 for (int x = 0; x <= bounds(0); x++)
                 {
                     for (int y = 0; y <= bounds(1); y += step(1))
@@ -142,7 +149,7 @@ namespace voxel_map
                         }
                     }
                 }
-
+                // dilate r-1 times
                 for (int loop = 1; loop < r; loop++)
                 {
                     std::swap(cvec, lvec);
@@ -178,11 +185,17 @@ namespace voxel_map
             return;
         }
 
+        /**
+         * @brief Get the surface points of the 3D occupancy map
+         * 
+         * @param points 
+         */
         inline void getSurf(std::vector<Eigen::Vector3d> &points) const
         {
             points.reserve(surf.size());
             for (const Eigen::Vector3i &id : surf)
             {
+                //cast Vector3di to Vector3d
                 points.push_back(id.cast<double>().cwiseProduct(stepScale) + oc);
             }
             return;

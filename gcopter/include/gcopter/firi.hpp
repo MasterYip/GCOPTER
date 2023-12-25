@@ -41,7 +41,12 @@
 
 namespace firi
 {
-
+    /**
+     * @brief Cholesky decomposition of a 3x3 matrix
+     * 
+     * @param A 
+     * @param L 
+     */
     inline void chol3d(const Eigen::Matrix3d &A,
                        Eigen::Matrix3d &L)
     {
@@ -156,10 +161,19 @@ namespace firi
         return cost;
     }
 
-    // Each row of hPoly is defined by h0, h1, h2, h3 as
-    // h0*x + h1*y + h2*z + h3 <= 0
-    // R, p, r are ALWAYS taken as the initial guess
-    // R is also assumed to be a rotation matrix
+    /**
+     * @brief Find the maximum volume inscribed ellipsoid (MVIE) of a polyhedron
+     * @note    Each row of hPoly is defined by h0, h1, h2, h3 as
+                h0*x + h1*y + h2*z + h3 <= 0
+                R, p, r are ALWAYS taken as the initial guess
+                R is also assumed to be a rotation matrix
+     * @param hPoly 
+     * @param R 
+     * @param p 
+     * @param r 
+     * @return true 
+     * @return false 
+     */
     inline bool maxVolInsEllipsoid(const Eigen::MatrixX4d &hPoly,
                                    Eigen::Matrix3d &R,
                                    Eigen::Vector3d &p,
@@ -264,6 +278,19 @@ namespace firi
         return ret >= 0;
     }
 
+    /**
+     * @brief Fast Iterative Region Inflation
+     * 
+     * @param[in] bd Max boundary for the polyhedron 
+     * @param[in] pc Boundary pointcloud of obstacles
+     * @param[in] a Start point?
+     * @param[in] b Target point the polyhedron should cover?
+     * @param[out] hPoly 
+     * @param[in] iterations 
+     * @param[in] epsilon 
+     * @return true 
+     * @return false 
+     */
     inline bool firi(const Eigen::MatrixX4d &bd,
                      const Eigen::Matrix3Xd &pc,
                      const Eigen::Vector3d &a,
@@ -285,7 +312,7 @@ namespace firi
         const int N = pc.cols();
 
         Eigen::Matrix3d R = Eigen::Matrix3d::Identity();
-        Eigen::Vector3d p = 0.5 * (a + b);
+        Eigen::Vector3d p = 0.5 * (a + b); // center of the polyhedron
         Eigen::Vector3d r = Eigen::Vector3d::Ones();
         Eigen::MatrixX4d forwardH(M + N, 4);
         int nH = 0;

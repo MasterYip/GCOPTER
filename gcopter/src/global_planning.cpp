@@ -112,6 +112,11 @@ public:
                                  ros::TransportHints().tcpNoDelay());
     }
 
+    /**
+     * @brief Map callback function, update voxel map
+     * 
+     * @param msg 
+     */
     inline void mapCallBack(const sensor_msgs::PointCloud2::ConstPtr &msg)
     {
         if (!mapInitialized)
@@ -119,6 +124,7 @@ public:
             size_t cur = 0;
             const size_t total = msg->data.size() / msg->point_step;
             float *fdata = (float *)(&msg->data[0]);
+            // Traverse all points in the sensor feedback point cloud
             for (size_t i = 0; i < total; i++)
             {
                 cur = msg->point_step / sizeof(float) * i;
@@ -144,7 +150,8 @@ public:
     {
         if (startGoal.size() == 2)
         {
-            std::vector<Eigen::Vector3d> route;
+            std::vector<Eigen::Vector3d> route; // RRT route from start to goal
+            // Plan a path from start to goal using Informed RRT*
             sfc_gen::planPath<voxel_map::VoxelMap>(startGoal[0],
                                                    startGoal[1],
                                                    voxelMap.getOrigin(),
@@ -153,8 +160,9 @@ public:
                                                    route);
             std::vector<Eigen::MatrixX4d> hPolys;
             std::vector<Eigen::Vector3d> pc;
+            // Get surface points of the voxel map
             voxelMap.getSurf(pc);
-
+            // Get convex cover(polytope) of the path
             sfc_gen::convexCover(route,
                                  pc,
                                  voxelMap.getOrigin(),
