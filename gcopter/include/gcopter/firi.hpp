@@ -281,7 +281,7 @@ namespace firi
     /**
      * @brief Fast Iterative Region Inflation
      * 
-     * @param[in] bd Max boundary for the polyhedron 
+     * @param[in] bd Max boundary for the polyhedron?
      * @param[in] pc Boundary pointcloud of obstacles
      * @param[in] a Start point?
      * @param[in] b Target point the polyhedron should cover?

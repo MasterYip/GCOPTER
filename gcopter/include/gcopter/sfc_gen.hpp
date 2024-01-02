@@ -148,6 +148,7 @@ namespace sfc_gen
     {
         hpolys.clear();
         const int n = path.size();
+        // The boundaries (4 boundary)? TODO: What is this?
         Eigen::Matrix<double, 6, 4> bd = Eigen::Matrix<double, 6, 4>::Zero();
         bd(0, 0) = 1.0;
         bd(1, 0) = -1.0;
@@ -174,7 +175,7 @@ namespace sfc_gen
                 i++;
             }
             bs.emplace_back(b);
-
+            // Boundary of the polyhedron
             bd(0, 3) = -std::min(std::max(a(0), b(0)) + range, highCorner(0));
             bd(1, 3) = +std::max(std::min(a(0), b(0)) - range, lowCorner(0));
             bd(2, 3) = -std::min(std::max(a(1), b(1)) + range, highCorner(1));
@@ -182,6 +183,7 @@ namespace sfc_gen
             bd(4, 3) = -std::min(std::max(a(2), b(2)) + range, highCorner(2));
             bd(5, 3) = +std::max(std::min(a(2), b(2)) - range, lowCorner(2));
 
+            // Filter out points outside the boundary
             valid_pc.clear();
             for (const Eigen::Vector3d &p : points)
             {
@@ -192,6 +194,7 @@ namespace sfc_gen
             }
             Eigen::Map<const Eigen::Matrix<double, 3, -1, Eigen::ColMajor>> pc(valid_pc[0].data(), 3, valid_pc.size());
 
+            // Fast Iterative Region Inflation
             // There must be a solution for a,b
             // because the path is collision free with margin (the polyhedron might be thin)
             firi::firi(bd, pc, a, b, hp);
