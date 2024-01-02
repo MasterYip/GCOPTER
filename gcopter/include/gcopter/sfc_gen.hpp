@@ -39,6 +39,7 @@
 #include <memory>
 #include <Eigen/Eigen>
 
+// Safety Flight Corridor Generation
 namespace sfc_gen
 {
     /**
@@ -126,7 +127,7 @@ namespace sfc_gen
     }
 
     /**
-     * @brief [IMPORTANT] Generate convex cover of a path 
+     * @brief Generate convex cover of a path 
      * @param[in] path RRT path
      * @param[in] points Boundary points of obstacles 
      * @param[in] lowCorner low bound of the map
@@ -190,7 +191,7 @@ namespace sfc_gen
                 }
             }
             Eigen::Map<const Eigen::Matrix<double, 3, -1, Eigen::ColMajor>> pc(valid_pc[0].data(), 3, valid_pc.size());
-            
+
             // There must be a solution for a,b
             // because the path is collision free with margin (the polyhedron might be thin)
             firi::firi(bd, pc, a, b, hp);
@@ -210,6 +211,11 @@ namespace sfc_gen
         }
     }
 
+    /**
+     * @brief Simplify the convex cover, make sure only adjacent polygons overlap
+     * 
+     * @param hpolys 
+     */
     inline void shortCut(std::vector<Eigen::MatrixX4d> &hpolys)
     {
         std::vector<Eigen::MatrixX4d> htemp = hpolys;
