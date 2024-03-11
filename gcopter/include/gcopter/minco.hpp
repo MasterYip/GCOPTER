@@ -393,7 +393,7 @@ namespace minco
         }
     };
 
-    // MINCO for s=3 and non-uniform time
+    // MINCO for s=3(3-order) and non-uniform time
     class MINCO_S3NU
     {
     public:
@@ -413,6 +413,13 @@ namespace minco
         Eigen::VectorXd T5;
 
     public:
+        /**
+         * @brief Set boundary conditions
+         * 
+         * @param headState 3*3 matrix, each column is position, velocity and acceleration
+         * @param tailState 
+         * @param pieceNum 
+         */
         inline void setConditions(const Eigen::Matrix3d &headState,
                                   const Eigen::Matrix3d &tailState,
                                   const int &pieceNum)
@@ -429,7 +436,13 @@ namespace minco
             T5.resize(N);
             return;
         }
-
+        
+        /**
+         * @brief Set the Parameters by calculating c(q,t)
+         * 
+         * @param inPs 
+         * @param ts 
+         */
         inline void setParameters(const Eigen::Matrix3Xd &inPs,
                                   const Eigen::VectorXd &ts)
         {

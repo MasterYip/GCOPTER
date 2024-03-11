@@ -140,6 +140,7 @@ namespace gcopter
             return;
         }
 
+        // From weight space (xi) to Euclidean Space (P)
         static inline void forwardP(const Eigen::VectorXd &xi,
                                     const Eigen::VectorXi &vIdx,
                                     const PolyhedraV &vPolys,
@@ -586,18 +587,28 @@ namespace gcopter
             return cost;
         }
 
+        /**
+         * @brief Get the Shortest Path through the corridor (to set the waypoints for MINCO?)
+         * @note the shortest path is a polyline go through each poly intersection
+         * @param ini Init pos
+         * @param fin Final pos
+         * @param vPolys V-rep Corridor (origin repositioned) 
+         * @param smoothD Smooth factor
+         * @param path Shortest Path
+         */
         static inline void getShortestPath(const Eigen::Vector3d &ini,
                                            const Eigen::Vector3d &fin,
                                            const PolyhedraV &vPolys,
                                            const double &smoothD,
                                            Eigen::Matrix3Xd &path)
         {
-            const int overlaps = vPolys.size() / 2;
-            Eigen::VectorXi vSizes(overlaps);
+            const int overlaps = vPolys.size() / 2; //Corridor: [v1, v1 cap v2, v2, ..., vN-1 cap vN, vN]
+            Eigen::VectorXi vSizes(overlaps);       //vSizes: Vertex number of each intersection
             for (int i = 0; i < overlaps; i++)
             {
-                vSizes(i) = vPolys[2 * i + 1].cols();
+                vSizes(i) = vPolys[2 * i + 1].cols();  
             }
+            // xi: Decision variable (Square mean root weights of each intersection vertex, squared sum = 1)
             Eigen::VectorXd xi(vSizes.sum());
             for (int i = 0, j = 0; i < overlaps; i++)
             {
@@ -636,10 +647,17 @@ namespace gcopter
                 path.col(i + 1) = vPolys[2 * i + 1].rightCols(k - 1) * r.cwiseProduct(r) +
                                   vPolys[2 * i + 1].col(0);
             }
-
             return;
         }
 
+        /**
+         * @brief 
+         * 
+         * @param hPs H-rep Corridor [h1, h2, ..., hN-1, hN]
+         * @param vPs V-rep Corridor [v1, v1 cap v2, v2, ..., vN-1 cap vN, vN] (repositioned)
+         * @return true 
+         * @return false 
+         */
         static inline bool processCorridor(const PolyhedraH &hPs,
                                            PolyhedraV &vPs)
         {
@@ -653,16 +671,18 @@ namespace gcopter
             PolyhedronV curIV, curIOB;
             for (int i = 0; i < sizeCorridor; i++)
             {
-                if (!geo_utils::enumerateVs(hPs[i], curIV))
+                if (!geo_utils::enumerateVs(hPs[i], curIV)) // H-rep to V-rep
                 {
                     return false;
                 }
-                nv = curIV.cols();
+                nv = curIV.cols(); // Vertex number
                 curIOB.resize(3, nv);
                 curIOB.col(0) = curIV.col(0);
                 curIOB.rightCols(nv - 1) = curIV.rightCols(nv - 1).colwise() - curIV.col(0);
+                // Set col(0) as origin, and the rest as relative position
                 vPs.push_back(curIOB);
 
+                // Combine two adjacent H-rep polys (find intersection)
                 curIH.resize(hPs[i].rows() + hPs[i + 1].rows(), 4);
                 curIH.topRows(hPs[i].rows()) = hPs[i];
                 curIH.bottomRows(hPs[i + 1].rows()) = hPs[i + 1];
@@ -690,6 +710,15 @@ namespace gcopter
             return true;
         }
 
+        /**
+         * @brief Set the Initial waypoints & time allocation
+         * 
+         * @param path Shortest Path
+         * @param speed 
+         * @param intervalNs 
+         * @param innerPoints New path (Add points that break up path if one segment is too long)
+         * @param timeAlloc Time allocation of waypoints
+         */
         static inline void setInitial(const Eigen::Matrix3Xd &path,
                                       const double &speed,
                                       const Eigen::VectorXi &intervalNs,
@@ -727,7 +756,7 @@ namespace gcopter
          * @param timeWeight 
          * @param initialPVA Initial position, velocity, and acceleration
          * @param terminalPVA Terminal position, velocity, and acceleration
-         * @param safeCorridor 
+         * @param safeCorridor H-rep polys
          * @param lengthPerPiece 
          * @param smoothingFactor 
          * @param integralResolution 
@@ -756,10 +785,12 @@ namespace gcopter
             hPolytopes = safeCorridor;
             for (size_t i = 0; i < hPolytopes.size(); i++)
             {
+                // Normalize the normal vectors
                 const Eigen::ArrayXd norms =
                     hPolytopes[i].leftCols<3>().rowwise().norm();
                 hPolytopes[i].array().colwise() /= norms;
             }
+            // Process the corridor - H-rep to V-rep + V-rep Intersections
             if (!processCorridor(hPolytopes, vPolytopes))
             {
                 return false;
@@ -772,7 +803,7 @@ namespace gcopter
             penaltyWt = penaltyWeights;
             physicalPm = physicalParams;
             allocSpeed = magnitudeBd(0) * 3.0;
-
+            // Get ShortestPath using L-BFGS (polyN+1 points)
             getShortestPath(headPVA.col(0), tailPVA.col(0),
                             vPolytopes, smoothEps, shortPath);
             const Eigen::Matrix3Xd deltas = shortPath.rightCols(polyN) - shortPath.leftCols(polyN);
