@@ -133,6 +133,21 @@ namespace flatness
             return;
         }
 
+        /**
+         * @brief Quadrotor diff flat system from dyn to kinematics
+         * 
+         * @param pos_grad 
+         * @param vel_grad 
+         * @param thr_grad 
+         * @param quat_grad 
+         * @param omg_grad 
+         * @param pos_total_grad 
+         * @param vel_total_grad 
+         * @param acc_total_grad 
+         * @param jer_total_grad 
+         * @param psi_total_grad 
+         * @param dpsi_total_grad 
+         */
         inline void backward(const Eigen::Vector3d &pos_grad,
                              const Eigen::Vector3d &vel_grad,
                              const double &thr_grad,

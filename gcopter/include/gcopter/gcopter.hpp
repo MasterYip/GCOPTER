@@ -86,6 +86,13 @@ namespace gcopter
         Eigen::VectorXd partialGradByTimes;
 
     private:
+
+        /**
+         * @brief tau to T (simplified, exp^tau = T 2-order approximation)
+         * 
+         * @param tau 
+         * @param T 
+         */
         static inline void forwardT(const Eigen::VectorXd &tau,
                                     Eigen::VectorXd &T)
         {
@@ -320,8 +327,22 @@ namespace gcopter
             }
         }
 
-        // magnitudeBounds = [v_max, omg_max, theta_max, thrust_min, thrust_max]^T
-        // penaltyWeights = [pos_weight, vel_weight, omg_weight, theta_weight, thrust_weight]^T
+        /**
+         * @brief
+         *
+         * @param T
+         * @param coeffs
+         * @param hIdx
+         * @param hPolys
+         * @param smoothFactor
+         * @param integralResolution
+         * @param magnitudeBounds [v_max, omg_max, theta_max, thrust_min, thrust_max]^T
+         * @param penaltyWeights [pos_weight, vel_weight, omg_weight, theta_weight, thrust_weight]^T
+         * @param flatMap
+         * @param cost
+         * @param gradT Gradient of time allocation
+         * @param gradC Gradient of coefficients
+         */
         // physicalParams = [vehicle_mass, gravitational_acceleration, horitonral_drag_coeff,
         //                   vertical_drag_coeff, parasitic_drag_coeff, speed_smooth_factor]^T
         static inline void attachPenaltyFunctional(const Eigen::VectorXd &T,
@@ -383,6 +404,7 @@ namespace gcopter
                     s3 = s2 * s1;
                     s4 = s2 * s2;
                     s5 = s4 * s1;
+                    // Derivatives of traj
                     beta0(0) = 1.0, beta0(1) = s1, beta0(2) = s2, beta0(3) = s3, beta0(4) = s4, beta0(5) = s5;
                     beta1(0) = 0.0, beta1(1) = 1.0, beta1(2) = 2.0 * s1, beta1(3) = 3.0 * s2, beta1(4) = 4.0 * s3, beta1(5) = 5.0 * s4;
                     beta2(0) = 0.0, beta2(1) = 0.0, beta2(2) = 2.0, beta2(3) = 6.0 * s1, beta2(4) = 12.0 * s2, beta2(5) = 20.0 * s3;
@@ -394,10 +416,12 @@ namespace gcopter
                     jer = c.transpose() * beta3;
                     sna = c.transpose() * beta4;
 
+                    // from vel, acc, jer to thr, quat, omg
                     flatMap.forward(vel, acc, jer, 0.0, 0.0, thr, quat, omg);
 
                     violaVel = vel.squaredNorm() - velSqrMax;
                     violaOmg = omg.squaredNorm() - omgSqrMax;
+                    // 2-order approx of cos(theta)
                     cos_theta = 1.0 - 2.0 * (quat(1) * quat(1) + quat(2) * quat(2));
                     violaTheta = acos(cos_theta) - thetaMax;
                     violaThrust = (thr - thrustMean) * (thr - thrustMean) - thrustSqrRadi;
@@ -409,6 +433,7 @@ namespace gcopter
 
                     L = hIdx(i);
                     K = hPolys[L].rows();
+                    // Position out of the corridor
                     for (int k = 0; k < K; k++)
                     {
                         outerNormal = hPolys[L].block<1, 3>(k, 0);
@@ -498,6 +523,7 @@ namespace gcopter
                                     obj.magnitudeBd, obj.penaltyWt, obj.flatmap,
                                     cost, obj.partialGradByTimes, obj.partialGradByCoeffs);
 
+            // propogate gradient from c,tau to q,t
             obj.minco.propogateGrad(obj.partialGradByCoeffs, obj.partialGradByTimes,
                                     obj.gradByPoints, obj.gradByTimes);
 
@@ -592,7 +618,7 @@ namespace gcopter
          * @note the shortest path is a polyline go through each poly intersection
          * @param ini Init pos
          * @param fin Final pos
-         * @param vPolys V-rep Corridor (origin repositioned) 
+         * @param vPolys V-rep Corridor (origin repositioned)
          * @param smoothD Smooth factor
          * @param path Shortest Path
          */
@@ -602,11 +628,11 @@ namespace gcopter
                                            const double &smoothD,
                                            Eigen::Matrix3Xd &path)
         {
-            const int overlaps = vPolys.size() / 2; //Corridor: [v1, v1 cap v2, v2, ..., vN-1 cap vN, vN]
-            Eigen::VectorXi vSizes(overlaps);       //vSizes: Vertex number of each intersection
+            const int overlaps = vPolys.size() / 2; // Corridor: [v1, v1 cap v2, v2, ..., vN-1 cap vN, vN]
+            Eigen::VectorXi vSizes(overlaps);       // vSizes: Vertex number of each intersection
             for (int i = 0; i < overlaps; i++)
             {
-                vSizes(i) = vPolys[2 * i + 1].cols();  
+                vSizes(i) = vPolys[2 * i + 1].cols();
             }
             // xi: Decision variable (Square mean root weights of each intersection vertex, squared sum = 1)
             Eigen::VectorXd xi(vSizes.sum());
@@ -651,12 +677,12 @@ namespace gcopter
         }
 
         /**
-         * @brief 
-         * 
+         * @brief
+         *
          * @param hPs H-rep Corridor [h1, h2, ..., hN-1, hN]
          * @param vPs V-rep Corridor [v1, v1 cap v2, v2, ..., vN-1 cap vN, vN] (repositioned)
-         * @return true 
-         * @return false 
+         * @return true
+         * @return false
          */
         static inline bool processCorridor(const PolyhedraH &hPs,
                                            PolyhedraV &vPs)
@@ -712,10 +738,10 @@ namespace gcopter
 
         /**
          * @brief Set the Initial waypoints & time allocation
-         * 
+         *
          * @param path Shortest Path
-         * @param speed 
-         * @param intervalNs 
+         * @param speed
+         * @param intervalNs
          * @param innerPoints New path (Add points that break up path if one segment is too long)
          * @param timeAlloc Time allocation of waypoints
          */
@@ -752,20 +778,20 @@ namespace gcopter
     public:
         /**
          * @brief Setup MINCO optimization problem
-         * 
-         * @param timeWeight 
+         *
+         * @param timeWeight
          * @param initialPVA Initial position, velocity, and acceleration
          * @param terminalPVA Terminal position, velocity, and acceleration
          * @param safeCorridor H-rep polys
-         * @param lengthPerPiece 
-         * @param smoothingFactor 
-         * @param integralResolution 
+         * @param lengthPerPiece
+         * @param smoothingFactor
+         * @param integralResolution
          * @param magnitudeBounds [v_max, omg_max, theta_max, thrust_min, thrust_max]^T
          * @param penaltyWeights [pos_weight, vel_weight, omg_weight, theta_weight, thrust_weight]^T
          * @param physicalParams [vehicle_mass, gravitational_acceleration, horitonral_drag_coeff,
          *                        vertical_drag_coeff, parasitic_drag_coeff, speed_smooth_factor]^T
-         * @return true 
-         * @return false 
+         * @return true
+         * @return false
          */
         inline bool setup(const double &timeWeight,
                           const Eigen::Matrix3d &initialPVA,
